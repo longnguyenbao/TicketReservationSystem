@@ -1,0 +1,158 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+
+<h1>THỐNG KÊ THÔNG TIN CÁC CHUYẾN XE</h1>
+
+<div class="row">
+    <div class="col-md-5 col-xs-12">
+        <form method='POST'>
+            {% csrf_token %}
+            <div class="form-group">
+                <label>
+                    {% if stat_type == 'by_month' %}
+                        <input type="radio" name="stat_type" value="by_month" checked />
+                    {% else %}
+                        <input type="radio" name="stat_type" value="by_month" />
+                    {% endif %}
+                    <span>Thống kê theo tháng </span>
+                    {% if my_month < 10 %}
+                        <input class="form-control" name='my_month' type="month" class="form-control" value="{{my_year}}-0{{my_month}}"/>
+                    {% else %}
+                        <input class="form-control" name='my_month' type="month" class="form-control" value="{{my_year}}-{{my_month}}"/>
+                    {% endif %}
+                </label>
+                <br/>
+
+                <label>
+                    {% if stat_type == 'by_year' %}
+                        <input type="radio" name="stat_type" value="by_year" checked />
+                    {% else %}
+                        <input type="radio" name="stat_type" value="by_year" />
+                    {% endif %}
+                    <span>Thống kê theo năm</span>
+                    <select name="my_year" class="form-control">
+                        {% for year in years %}
+                            {% if year == my_year %}
+                                <option value='{{ year }}' selected>{{ year }}</option>
+                            {% else %}
+                                <option value='{{ year }}'>{{ year }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <input type="checkbox" name="quarter_checked" {% if quarter_checked %} checked {% endif %}/>
+                    <label>Thống kê theo quý</label>
+                    <select name="my_quarter" class="form-control">
+                        {% for quarter in quarters %}
+                            {% if quarter == my_quarter %}
+                                <option value='{{ quarter }}' selected>{{ quarter }}</option>
+                            {% else %}
+                                <option value='{{ quarter }}'>{{ quarter }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
+
+            </div>
+            <input type="submit" class="btn btn-primary" value="Thống kê"/>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5 col-xs-12">
+        <table class="table">
+            <tr>
+                <td>Route id</td>
+                <td>Departure location</td>
+                <td>Arrival location</td>
+                <td>Schedule count</td>
+                <td>Total paid</td>
+            </tr>
+            {% for s, p in stats %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>{{ s.departure_location__name }}</td>
+                <td>{{ s.arrival_location__name }}</td>
+                <td>{{ s.schedule_count }}</td>
+                <td>{{ p }} VND</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+    </div>
+</div>
+<p>Số lượng chuyến xe: {{ count }}</p>
+<p>Số lượng tuyến xe: {{ schedules_count }}</p>
+
+<h2>Thống kê mật độ chuyến xe theo tuyến</h2>
+<div>
+      <canvas id="matDoChuyenXeChart"></canvas>
+</div>
+
+<h2>Thống kê doanh thu</h2>
+<div>
+      <canvas id="doanhThuChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let labels=[], data=[], labels2=[], data2=[]
+    {% for s in schedule_count_stats %}
+
+        {% if s.schedule_count %}
+            labels.push("{{ s.id }}")
+            data.push({{ s.schedule_count }})
+        {% endif %}
+    {% endfor %}
+
+    {% for r, p in total_paid %}
+        {% if p %}
+            labels2.push("{{ r }}")
+            data2.push({{ p }})
+        {% endif %}
+    {% endfor %}
+
+    window.onload = function() {
+        let ctx = document.getElementById("matDoChuyenXeChart").getContext("2d")
+        showChart(ctx, labels, data, "bar")
+
+        let ctx2 = document.getElementById("doanhThuChart").getContext("2d")
+        showChart(ctx2, labels2, data2, "bar")
+    }
+
+    function showChart(ctx, labels, data, type) {
+        let colors=[], borderColors=[]
+        let r, g, b
+        for (let i = 0; i < labels.length; i++) {
+            r = parseInt(Math.random()*255)
+            g = parseInt(Math.random()*255)
+            b = parseInt(Math.random()*255)
+            colors.push(`rgba(${r}, ${g}, ${b}, 0.8)`)
+            borderColors.push(`rgba(${r}, ${g}, ${b}, 1)`)
+        }
+
+        const myChart = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Thống kê',
+                data: data,
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+          }
+        });
+    }
+</script>
+
+{% endblock %}
